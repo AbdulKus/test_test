@@ -17,7 +17,10 @@
 
 ## GitHub Pages
 
-Workflow `.github/workflows/pages.yml` публикует сайт через GitHub Pages при push в `main`.
+Один раз включи публикацию в репозитории:
 
-Если GitHub впервые попросит выбрать источник Pages вручную:
-**Settings → Pages → Source → GitHub Actions**.
+**Settings → Pages → Build and deployment → Source: Deploy from a branch → Branch: main → /(root) → Save**
+
+После этого сайт будет доступен по адресу:
+
+`https://abdulkus.github.io/test_test/`
