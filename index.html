@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#5f5ce6">
+  <meta name="color-scheme" content="light dark">
+  <title>Тренировочный тест — 527 вопросов</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <div class="loading-screen" id="loadingScreen">
+      <div class="loader"></div>
+      <div>Загружаю 527 вопросов…</div>
+    </div>
+  </div>
+
+  <template id="homeTemplate">
+    <main class="home-page">
+      <section class="hero">
+        <div class="hero-badge">527 вопросов · 477 одиночных · 50 множественных</div>
+        <h1>Тренировочный тест</h1>
+        <p>Полный набор вопросов из Moodle. Работает прямо в браузере и сохраняет прогресс на этом устройстве.</p>
+      </section>
+
+      <section id="resumeCard" class="resume-card hidden"></section>
+
+      <section id="modePicker" class="mode-grid">
+        <article class="mode-card">
+          <div class="mode-icon">✓</div>
+          <h2>Тест</h2>
+          <p>Отвечай самостоятельно. В конце получишь баллы, процент и разбор ошибок.</p>
+
+          <div class="choice-group">
+            <label class="radio-row">
+              <input type="radio" name="feedbackMode" value="instant" checked>
+              <span>
+                <b>Показывать результат сразу</b>
+                <small>После ответа видно, верно или нет. Для вопросов с несколькими вариантами есть кнопка «Проверить».</small>
+              </span>
+            </label>
+            <label class="radio-row">
+              <input type="radio" name="feedbackMode" value="final">
+              <span>
+                <b>Показать только после завершения</b>
+                <small>Во время прохождения никаких подсказок. Разбор появится в самом конце.</small>
+              </span>
+            </label>
+          </div>
+
+          <button class="btn primary wide" data-action="start-test">Начать тест</button>
+        </article>
+
+        <article class="mode-card accent">
+          <div class="mode-icon">👁</div>
+          <h2>Ответы сразу</h2>
+          <p>Правильные варианты подсвечены с самого начала. Можно использовать как режим изучения и всё равно получить итоговый счёт.</p>
+          <div class="study-note">
+            <span>Подходит для повторения перед экзаменом.</span>
+          </div>
+          <button class="btn secondary wide" data-action="start-study">Открыть с ответами</button>
+        </article>
+      </section>
+
+      <footer class="home-footer">
+        <span>Прогресс хранится локально в браузере.</span>
+        <span>Он останется после перезагрузки, пока не нажмёшь «Заново».</span>
+      </footer>
+    </main>
+  </template>
+
+  <template id="quizTemplate">
+    <div class="quiz-layout">
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-head">
+          <div>
+            <div class="eyebrow">Навигация</div>
+            <strong id="sidebarTitle">527 вопросов</strong>
+          </div>
+          <button class="icon-btn mobile-only" data-action="close-nav" aria-label="Закрыть">×</button>
+        </div>
+
+        <div class="sidebar-progress">
+          <div class="progress-line"><span id="sideProgressBar"></span></div>
+          <div class="progress-meta">
+            <span id="sideAnswered">0 отвечено</span>
+            <span id="sideCorrect"></span>
+          </div>
+        </div>
+
+        <div class="nav-tools">
+          <label class="jump-box">
+            <span>К вопросу</span>
+            <input id="jumpInput" type="number" min="1" max="527" inputmode="numeric" placeholder="№">
+          </label>
+          <button class="btn tiny" data-action="jump">Перейти</button>
+        </div>
+
+        <div class="legend">
+          <span><i class="dot neutral"></i> нет ответа</span>
+          <span><i class="dot answered"></i> отвечен</span>
+          <span><i class="dot correct"></i> верно</span>
+          <span><i class="dot wrong"></i> ошибка</span>
+        </div>
+
+        <div class="question-grid" id="questionGrid"></div>
+
+        <div class="sidebar-actions">
+          <button class="btn ghost wide" data-action="finish">Завершить тест</button>
+          <button class="btn danger-ghost wide" data-action="restart">Заново</button>
+        </div>
+      </aside>
+
+      <div class="sidebar-backdrop" data-action="close-nav"></div>
+
+      <section class="quiz-main">
+        <header class="topbar">
+          <button class="icon-btn mobile-only" data-action="open-nav" aria-label="Навигация">☰</button>
+          <div class="topbar-title">
+            <div class="eyebrow" id="modeLabel">Тест</div>
+            <strong id="topQuestionCounter">Вопрос 1 из 527</strong>
+          </div>
+          <div class="topbar-score" id="topbarScore"></div>
+          <button class="btn danger-ghost compact desktop-only" data-action="restart">Заново</button>
+        </header>
+
+        <main class="question-stage">
+          <article class="question-card" id="questionCard"></article>
+        </main>
+
+        <footer class="bottom-nav">
+          <button class="btn ghost" data-action="prev">← Назад</button>
+          <div class="bottom-center" id="bottomCenter"></div>
+          <button class="btn primary" data-action="next">Далее →</button>
+        </footer>
+      </section>
+    </div>
+  </template>
+
+  <template id="resultTemplate">
+    <main class="result-page">
+      <section class="result-card">
+        <div class="result-kicker">Тест завершён</div>
+        <div class="score-ring" id="scoreRing">
+          <div>
+            <strong id="resultScore">0</strong>
+            <span id="resultTotal">/ 527</span>
+          </div>
+        </div>
+        <h1 id="resultHeadline">Результат</h1>
+        <p id="resultPercent"></p>
+
+        <div class="result-stats">
+          <div class="stat good"><b id="statCorrect">0</b><span>Правильно</span></div>
+          <div class="stat bad"><b id="statWrong">0</b><span>Ошибок</span></div>
+          <div class="stat muted"><b id="statEmpty">0</b><span>Без ответа</span></div>
+        </div>
+
+        <div class="result-actions">
+          <button class="btn primary" data-action="review-wrong">Разобрать ошибки</button>
+          <button class="btn secondary" data-action="review-all">Посмотреть все вопросы</button>
+          <button class="btn danger-ghost" data-action="restart">Заново</button>
+        </div>
+
+        <p class="saved-note">Результат сохранён в этом браузере и не пропадёт после перезагрузки.</p>
+      </section>
+    </main>
+  </template>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
