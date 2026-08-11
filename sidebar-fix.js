@@ -1,3 +1,95 @@
+// Repairs Moodle answer keys that were falsely matched by substring.
+// Example: "Правильный ответ: не разрешается" must NOT also mark "разрешается".
+const baseNormalizeSourceForExactAnswers = normalizeSource;
+
+function exactAnswerNorm(value) {
+  return String(value || "")
+    .replace(/\u00a0/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function exactAnswerKey(value) {
+  return exactAnswerNorm(value).toLocaleLowerCase("ru");
+}
+
+function exactAnswerTail(raw) {
+  return exactAnswerNorm(raw)
+    .replace(/^Правильн(?:ый ответ|ые ответы)\s*:\s*/i, "")
+    .trim();
+}
+
+function parseExactMultipleAnswers(tail, options) {
+  const source = exactAnswerKey(tail);
+  const optionKeys = options.map(exactAnswerKey);
+  const memo = new Map();
+
+  function walk(position, usedMask) {
+    const memoKey = `${position}:${usedMask}`;
+    if (memo.has(memoKey)) return memo.get(memoKey);
+    if (position === source.length) return [];
+
+    for (let i = 0; i < optionKeys.length; i++) {
+      if ((usedMask & (1 << i)) !== 0) continue;
+      const key = optionKeys[i];
+      if (!source.startsWith(key, position)) continue;
+
+      const end = position + key.length;
+      if (end === source.length) {
+        const result = [options[i]];
+        memo.set(memoKey, result);
+        return result;
+      }
+
+      if (source.startsWith(", ", end)) {
+        const rest = walk(end + 2, usedMask | (1 << i));
+        if (rest) {
+          const result = [options[i], ...rest];
+          memo.set(memoKey, result);
+          return result;
+        }
+      }
+    }
+
+    memo.set(memoKey, null);
+    return null;
+  }
+
+  return walk(0, 0);
+}
+
+normalizeSource = function (source) {
+  const normalized = baseNormalizeSourceForExactAnswers(source);
+
+  normalized.questions.forEach((question, index) => {
+    const raw = source.questions[index];
+    if (!raw) return;
+
+    const tail = exactAnswerTail(raw.rightAnswerRaw);
+    if (!tail) return;
+
+    if (raw.type === "single_choice") {
+      const target = exactAnswerKey(tail);
+      const exact = question.options.filter(option => exactAnswerKey(option) === target);
+      if (exact.length !== 1) {
+        throw new Error(`Не удалось однозначно восстановить ответ для вопроса №${raw.number}`);
+      }
+      question.correct = [exact[0]];
+      return;
+    }
+
+    if (raw.type === "multiple_choice") {
+      const parsed = parseExactMultipleAnswers(tail, question.options);
+      if (!parsed || !parsed.length) {
+        throw new Error(`Не удалось восстановить несколько ответов для вопроса №${raw.number}`);
+      }
+      question.correct = [...new Set(parsed)];
+    }
+  });
+
+  return normalized;
+};
+
 // Keeps the sidebar controls visible at every viewport height.
 // Only the 527-question number grid should scroll vertically.
 const sidebarFixStyle = document.createElement("style");
