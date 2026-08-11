@@ -5,23 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#5f5ce6">
   <meta name="color-scheme" content="light dark">
-  <title>Тренировочный тест — 527 вопросов</title>
+  <title>Тренировочные тесты</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div id="app">
     <div class="loading-screen" id="loadingScreen">
       <div class="loader"></div>
-      <div>Загружаю 527 вопросов…</div>
+      <div>Загружаю тест…</div>
     </div>
   </div>
 
   <template id="homeTemplate">
     <main class="home-page">
       <section class="hero">
-        <div class="hero-badge">527 вопросов · 477 одиночных · 50 множественных</div>
+        <div class="hero-badge">Банк вопросов</div>
         <h1>Тренировочный тест</h1>
-        <p>Полный набор вопросов из Moodle. Работает прямо в браузере и сохраняет прогресс на этом устройстве.</p>
+        <p>Выберите набор вопросов выше и режим прохождения ниже.</p>
       </section>
 
       <section id="resumeCard" class="resume-card hidden"></section>
@@ -55,9 +55,9 @@
         <article class="mode-card accent">
           <div class="mode-icon">👁</div>
           <h2>Ответы сразу</h2>
-          <p>Правильные варианты подсвечены с самого начала. Можно использовать как режим изучения и всё равно получить итоговый счёт.</p>
+          <p>Правильные варианты подсвечены с самого начала. Режим для спокойного просмотра и повторения без баллов.</p>
           <div class="study-note">
-            <span>Подходит для повторения перед экзаменом.</span>
+            <span>Считаются просмотренные вопросы, а не ответы.</span>
           </div>
           <button class="btn secondary wide" data-action="start-study">Открыть с ответами</button>
         </article>
@@ -65,7 +65,7 @@
 
       <footer class="home-footer">
         <span>Прогресс хранится локально в браузере.</span>
-        <span>Он останется после перезагрузки, пока не нажмёшь «Заново».</span>
+        <span>Перезагрузка страницы его не сбрасывает.</span>
       </footer>
     </main>
   </template>
@@ -76,7 +76,7 @@
         <div class="sidebar-head">
           <div>
             <div class="eyebrow">Навигация</div>
-            <strong id="sidebarTitle">527 вопросов</strong>
+            <strong id="sidebarTitle">Вопросы</strong>
           </div>
           <button class="icon-btn mobile-only" data-action="close-nav" aria-label="Закрыть">×</button>
         </div>
@@ -92,7 +92,7 @@
         <div class="nav-tools">
           <label class="jump-box">
             <span>К вопросу</span>
-            <input id="jumpInput" type="number" min="1" max="527" inputmode="numeric" placeholder="№">
+            <input id="jumpInput" type="number" min="1" inputmode="numeric" placeholder="№">
           </label>
           <button class="btn tiny" data-action="jump">Перейти</button>
         </div>
@@ -119,7 +119,7 @@
           <button class="icon-btn mobile-only" data-action="open-nav" aria-label="Навигация">☰</button>
           <div class="topbar-title">
             <div class="eyebrow" id="modeLabel">Тест</div>
-            <strong id="topQuestionCounter">Вопрос 1 из 527</strong>
+            <strong id="topQuestionCounter">Вопрос</strong>
           </div>
           <div class="topbar-score" id="topbarScore"></div>
           <button class="btn danger-ghost compact desktop-only" data-action="restart">Заново</button>
@@ -145,7 +145,7 @@
         <div class="score-ring" id="scoreRing">
           <div>
             <strong id="resultScore">0</strong>
-            <span id="resultTotal">/ 527</span>
+            <span id="resultTotal">/ 0</span>
           </div>
         </div>
         <h1 id="resultHeadline">Результат</h1>
@@ -168,8 +168,10 @@
     </main>
   </template>
 
+  <script src="preload.js" defer></script>
   <script src="app.js" defer></script>
   <script src="patch.js" defer></script>
   <script src="sidebar-fix.js" defer></script>
+  <script src="multi-test.js" defer></script>
 </body>
 </html>
