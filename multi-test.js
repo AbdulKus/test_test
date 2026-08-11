@@ -8,7 +8,6 @@
       name: 'Медицинская сестра по физиотерапии (старшая), медицинский брат по физиотерапии (старший)',
       description: '527 вопросов',
       file: 'moodle_527_questions_with_answers.json',
-      compressed: false,
       version: '54e779ae9103',
       storageKey: 'moodle527_session_54e779ae9103'
     },
@@ -16,10 +15,13 @@
       id: 'general306',
       name: 'Вопросы по общепрофессиональным дисциплинам (дополнительные) СCО',
       description: '306 вопросов · 8 глав',
-      file: 'moodle_306_questions_with_answers_and_sections.json.gz',
-      compressed: true,
-      version: 'general306-v1',
-      storageKey: 'moodle306_general_session_v1'
+      parts: [
+        'data/q306u-1.b64',
+        'data/q306u-2.b64',
+        'data/q306u-3.b64'
+      ],
+      version: 'general306-v2',
+      storageKey: 'moodle306_general_session_v2'
     }
   };
 
@@ -40,13 +42,57 @@
     return TESTS[activeTestId];
   }
 
-  function normalizeGeneralSource(source) {
+  function ultraToGeneralSource(source) {
+    if (!Array.isArray(source?.q)) return source;
+
+    const sections = (source.s || []).map(([name, start, end]) => ({
+      name: clean(name),
+      start: Number(start),
+      end: Number(end)
+    }));
+
+    const questions = source.q.map(([question, multiple, options, correctIndexes], index) => {
+      const number = index + 1;
+      const optionTexts = (options || []).map(clean);
+      const correctAnswers = (correctIndexes || [])
+        .map(i => optionTexts[Number(i)])
+        .filter(Boolean);
+
+      return {
+        number,
+        question: clean(question),
+        type: multiple ? 'multiple_choice' : 'single_choice',
+        chapter: sections.find(section => number >= section.start && number <= section.end)?.name || null,
+        options: optionTexts.map(text => ({ text })),
+        correctAnswers
+      };
+    });
+
+    return {
+      title: source.t || TESTS.general306.name,
+      totalQuestions: questions.length,
+      sections,
+      questions
+    };
+  }
+
+  function normalizeGeneralSource(rawSource) {
+    const source = ultraToGeneralSource(rawSource);
+
+    const sections = (source.sections || [])
+      .map(section => ({
+        name: clean(section.name),
+        start: Number(section.start),
+        end: Number(section.end)
+      }))
+      .filter(section => section.name && Number.isInteger(section.start) && Number.isInteger(section.end));
+
     const questions = (source.questions || []).map((raw, index) => {
       const options = [];
       const seen = new Set();
 
       for (const option of raw.options || []) {
-        const text = clean(option?.text);
+        const text = clean(typeof option === 'string' ? option : option?.text);
         if (!text || seen.has(text)) continue;
         seen.add(text);
         options.push(text);
@@ -65,29 +111,17 @@
         throw new Error(`Не найдены ответы для вопроса №${raw.number || index + 1}`);
       }
 
+      const id = Number(raw.number || index + 1);
+
       return {
-        id: Number(raw.number || index + 1),
+        id,
         text: clean(raw.question),
         type: raw.type === 'multiple_choice' ? 'multiple' : 'single',
         options,
         correct,
-        chapter: clean(raw.chapter) || null
+        chapter: clean(raw.chapter) || sections.find(s => id >= s.start && id <= s.end)?.name || null
       };
     }).sort((a, b) => a.id - b.id);
-
-    const sections = (source.sections || [])
-      .map(section => ({
-        name: clean(section.name),
-        start: Number(section.start),
-        end: Number(section.end)
-      }))
-      .filter(section => section.name && Number.isInteger(section.start) && Number.isInteger(section.end));
-
-    for (const q of questions) {
-      if (!q.chapter) {
-        q.chapter = sections.find(s => q.id >= s.start && q.id <= s.end)?.name || null;
-      }
-    }
 
     return {
       title: TESTS.general306.name,
@@ -100,7 +134,11 @@
   }
 
   normalizeSource = function(source) {
-    if (Array.isArray(source?.sections) && Number(source?.totalQuestions) === 306) {
+    if (source?.__quizLoadError) {
+      throw new Error(source.__quizLoadError);
+    }
+
+    if (Array.isArray(source?.q) || (Array.isArray(source?.sections) && Number(source?.totalQuestions) === 306)) {
       return normalizeGeneralSource(source);
     }
 
@@ -151,19 +189,32 @@
     };
   };
 
-  async function fetchTestSource(config) {
-    const response = await fetch(config.file, { cache: 'no-store' });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    if (!config.compressed) return response.json();
-
+  async function loadUltraParts(parts) {
     if (typeof DecompressionStream !== 'function') {
-      throw new Error('Для второго теста нужен современный Chrome/браузер с поддержкой gzip.');
+      throw new Error('Для второго теста нужен современный браузер с поддержкой gzip.');
     }
 
-    const compressed = await response.arrayBuffer();
-    const stream = new Blob([compressed]).stream().pipeThrough(new DecompressionStream('gzip'));
+    const texts = await Promise.all(parts.map(async path => {
+      const response = await fetch(path, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}: ${path}`);
+      return (await response.text()).trim();
+    }));
+
+    const binary = atob(texts.join(''));
+    const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+    const stream = new Blob([bytes])
+      .stream()
+      .pipeThrough(new DecompressionStream('gzip'));
     const text = await new Response(stream).text();
     return JSON.parse(text);
+  }
+
+  async function fetchTestSource(config) {
+    if (Array.isArray(config.parts)) return loadUltraParts(config.parts);
+
+    const response = await fetch(config.file, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
   }
 
   async function switchTest(nextId) {
@@ -354,8 +405,4 @@
     @media(max-width:600px){.chapter-nav-grid{grid-template-columns:repeat(6,1fr)}}
   `;
   document.head.appendChild(style);
-
-  // If the preloader substituted the second bank for the hard-coded initial
-  // request, normalizeSource above will recognise it. The normal app boot then
-  // uses the correct save slot and our patched renderers.
 })();
